@@ -38,7 +38,16 @@ var initGraph = function(people, target)
     var g = d3.select(target)
         .append("g")
         .classed("graph",true)
-        .attr("transform", "translate(" +margins.left +","+ margins.top +")");    
+        .attr("transform", "translate(" +margins.left +","+ margins.top +")"); 
+    
+    //Addition
+    var legend = d3.select(target)
+        .append("g")
+        .classed("legend", true)
+    var svg = legend.append("svg")
+        .attr("id", "legendSvg")
+    console.log(svg)
+
     
     //build scales
     
@@ -53,29 +62,26 @@ var initGraph = function(people, target)
                 .range([0,screen.height/3])
     
     var colorScale = d3.scaleLinear()
-        .range(["white", "blue"])
+        .range(["white", "teal"])
         .domain([0,getMaxPop(people)])
-    
     var labelTitle = "Population by Color"
-    console.log(d3.max(people.map(function(person){return person.age})))
+    
+    
+    
+    
+    //calls for legend
+   
+    createLegendAxes(legendScale,margins,screen,"#legendSvg")
+    createLegendLabel("#legendSvg","Population by Color",margins, screen)
+    createGradiant("#legendSvg","white","teal")
+    createLegend(screen, margins, screen, "#legendSvg","white", "teal", legendScale, labelTitle)
+    
+    //calls for actual graph
     createLabels(screen,margins,graph,target);
-    createLegend(screen, margins, graph, target,"white", "blue", legendScale, labelTitle)
     createAxes(screen,margins,graph,target,xScale,yScale);
-    DrawHeatMap(people, graph, target, xScale, yScale, colorScale, function(person){return person.population},function(person){return person.population},"white","blue");
+    DrawHeatMap(people, graph, target, xScale, yScale, colorScale, function(person){return person.population},function(person){return person.population},"white","teal");
     initButtons(people, target, xScale, yScale, lengths);
     
-}
-var clearMap = function(target)
-{
-    d3.select(target)
-        .select(".graph")
-        .selectAll("rect")
-        .remove();
-}
-var clearLegend = function(target)
-{
-    d3.select(target)
-        .remove()
 }
 var createLabels = function(screen, margins, graph, target)
 {
@@ -110,14 +116,25 @@ var createLabels = function(screen, margins, graph, target)
 }
 var createLegend = function(screen, margins, graph, target,startColor, endColor,legendScale,labelTitle)
 {
-    var moneyScale = 
-        d3.scaleSequential()
-        .domain([0,1000000])
-        .interpolator(d3.interpolateBlues);
-    var legend = d3.select(target)
-        .append("g")
-        .classed("legend", true)
-    var svg = legend.append("svg")
+   
+    updateLegendAxes(legendScale,target)
+    updateLegendLabel("#legendText",labelTitle)
+    updateGradiant(startColor,endColor)
+
+    svg = d3.select(target)
+    svg.append("rect")
+            .attr("id", "labelRect")
+            .attr("width", "10")
+            .attr("height", screen.height/3)
+            .attr("x", screen.width - margins.right + 35)
+            .attr("y", margins.top + 15)
+            .attr("fill", "url(#linearGradient)")
+            .attr("stroke", "black")
+          
+}
+var createGradiant= function(target,startColor,endColor)
+{
+    var svg = d3.select(target)
     
     var def = svg.append("defs")
     var linearGradient = def.append("linearGradient")
@@ -129,38 +146,68 @@ var createLegend = function(screen, margins, graph, target,startColor, endColor,
             .attr("spreadMethod", "pad")
     //Set the color for the start (0%)
     linearGradient.append("stop")
+        .attr("id","startColor")
         .attr("offset", "0%")
         .attr("stop-color", startColor);
 
     //Set the color for the end (100%)
     linearGradient.append("stop")
+        .attr("id","endColor")
         .attr("offset", "100%")
         .attr("stop-color", endColor); //dark blue
+}
+var updateGradiant= function(startColor,endColor)
+{
+    d3.select("#startColor")
+        .transition()
+        .attr("stop-color", startColor)
     
-   svg.append("rect")
-            .attr("width", "10")
-            .attr("height", screen.height/3)
-            .attr("x", screen.width - margins.right + 35)
-            .attr("y", margins.top + 15)
-            .attr("fill", "url(#linearGradient)")
-            .attr("stroke", "black")
-    // text element
-   svg.append("g")
+    d3.select("#endColor")
+        .transition()
+        .attr("stop-color", endColor)
+}
+var createLegendLabel = function(target,labelTitle, margins, screen)
+{
+    console.log(screen.width)
+    d3.select(target).append("g")
             .attr("transform","translate("+(screen.width + 10)+","+(- screen.height - margins.bottom +5)+")")
             .append("text")
+            .attr("id", "legendText")
             .text(labelTitle)
                 .style("font-size","14")
                 .attr("x",screen.width - margins.right +45)
                 .attr("y", margins.top +15)
                 .attr("text-anchor","middle")
                 .attr("transform","rotate(90)")
+}
+var updateLegendLabel = function(target,labelTitle)
+{
+    d3.select(target)
+        .text(labelTitle)
+}
+var createLegendAxes = function(legendScale, margins, screen, target)
+{
+    console.log(screen.width)
     var legendAxis = d3.axisLeft(legendScale)
             .ticks(5);
-    svg.append("g")
-            .classed("axis", "true")
+    var lAxis = d3.select(target)
+            .append("g")
+            .classed("lAxis", "true")
             .attr("transform","translate("+(screen.width - margins.right +35) +","+(margins.top +15)+")")
             .call(legendAxis)
-            
+    
+    
+    
+}
+var updateLegendAxes = function(legendScale,target)
+{
+    var legendAxis = d3.axisLeft(legendScale)
+            .ticks(5);
+    
+    d3.select(".lAxis")
+        .transition()
+        .duration(500)
+        .call(legendAxis)
 }
 var createAxes = function(screen,margins,graph,
                            target,xScale,yScale)
@@ -186,28 +233,27 @@ var initButtons = function(people,target, xScale, yScale, lengths)
     .on("click",function()
     {
         //clear old stuff
-        clearMap(target);
-        clearLegend(".legend");
+        
+        //clearLegend(".legend");
         
         // redefineScales
         var colorScale = d3.scaleLinear()
-            .range(["white", "blue"])
+            .range(["white", "teal"])
             .domain([0,getMaxPop(people)])
         var legendScale = d3.scaleLinear()
                 .domain([0,getMaxPop(people)])
                 .range([0,lengths.screen.height/3])
         
         //draw map and legend
-        DrawHeatMap(people, lengths.graph, target, xScale, yScale, colorScale,function(person){return person.population},function(person){return person.population},"white","blue");
-        createLegend(lengths.screen, lengths.margins, lengths.graph, target, "white", "blue",legendScale,"Population by Color")
+        DrawHeatMap(people, lengths.graph, target, xScale, yScale, colorScale,function(person){return person.population},function(person){return person.population},"white","teal");
+        createLegend(lengths.screen, lengths.margins, lengths.graph, "#legendSvg", "white", "teal",legendScale,"Population by Color")
     })
     
     
     d3.select("#mvf")
     .on("click",function()
     {
-        clearMap(target);
-        clearLegend(".legend");
+        //clearLegend(".legend");
         
         var colorScale = d3.scaleLinear()
             .range(["white", "pink"])
@@ -220,13 +266,12 @@ var initButtons = function(people,target, xScale, yScale, lengths)
         
         DrawHeatMap(people, lengths.graph, target, xScale, yScale, colorScale,function(person){return (person.population - person.malePop)/person.population*100},function(person){return person.population - person.malePop},"white","pink");
         
-        createLegend(lengths.screen, lengths.margins, lengths.graph, target, "white", "pink",legendScale,"Female Percentage")
+        createLegend(lengths.screen, lengths.margins, lengths.graph, "#legendSvg", "white", "pink",legendScale,"Female Percentage")
     })
      d3.select("#wvm")
     .on("click",function()
     {
-        clearMap(target);
-        clearLegend(".legend");
+        //clearLegend(".legend");
         
         var colorScale = d3.scaleLinear()
             .range(["white", "orange"])
@@ -238,13 +283,12 @@ var initButtons = function(people,target, xScale, yScale, lengths)
         
         
         DrawHeatMap(people, lengths.graph, target, xScale, yScale, colorScale,function(person){return (person.minorityPop)/person.population*100},function(person){return person.minorityPop},"white","orange");
-        createLegend(lengths.screen, lengths.margins, lengths.graph, target, "white", "orange",legendScale,"Minority Percentage")
+        createLegend(lengths.screen, lengths.margins, lengths.graph, "#legendSvg", "white", "orange",legendScale,"Minority Percentage")
     })
      d3.select("#ivp")
     .on("click",function()
     {
-        clearMap(target);
-        clearLegend(".legend");
+        //clearLegend(".legend");
         
         var colorScale = d3.scaleLinear()
             .range(["white", "red"])
@@ -257,25 +301,37 @@ var initButtons = function(people,target, xScale, yScale, lengths)
         
         
         DrawHeatMap(people, lengths.graph, target, xScale, yScale, colorScale,function(person){return (person.IndependentPop)/person.population*100},function(person){return person.IndependentPop},"white","red");
-        createLegend(lengths.screen, lengths.margins, lengths.graph, target, "white", "red",legendScale,"Independent Percentage")
+        createLegend(lengths.screen, lengths.margins, lengths.graph, "#legendSvg", "white", "red",legendScale,"Independent Percentage")
     })
     
 }
     
 var DrawHeatMap = function(people, graph, target, xScale, yScale, colorScale,colorFunction,pieFunction, pieColor1, pieColor2,pieText1)
 {
+    //Join
     var heatMap = d3.select(target)
     .select(".graph")
     .selectAll("g")
     .data(people)
+    //Enter
     .enter()
     .append("rect")
+    //Exit
+    heatMap.exit()
+        .remove();
+    //update
+    heatMap =d3.select(target)
+        .select(".graph")
+        .selectAll("rect")
         .attr("x", function(person){return xScale(person.age) })
         .attr("y", function(person){return yScale(person.interest)})
+        .style("fill","white")
+    heatMap.transition()
+        .duration(1500)
         .attr("width", xScale.bandwidth())
         .attr("height", yScale.bandwidth())
         .style("fill",function(person){return colorScale(colorFunction(person))})
-        .on("mouseover", function(person)
+    heatMap.on("mouseover", function(person)
         {
             var person = person
             var xPosition = d3.event.PageX;
@@ -300,6 +356,7 @@ var DrawHeatMap = function(people, graph, target, xScale, yScale, colorScale,col
 }
 var drawPieChart = function(person, target, specificFunction, pieColor1, pieColor2)
 {
+    
     var datapoint1 = Math.round(specificFunction(person))
     var datapoint2 = person.population- datapoint1
     var color = d3.scaleOrdinal()
@@ -333,9 +390,11 @@ var drawPieChart = function(person, target, specificFunction, pieColor1, pieColo
             return "translate("+arc.centroid(d) +")";
         })
         .attr("text-anchor", "middle")
-        .text(function(d){return d.value});
+        .text(function(d){if(d.value > 0){if(d.value == 1){return d.value + " Person"} else{return d.value + " People"}}});
+ 
 }
 // helper functions that dont draw anything, but make code more readable for people.
+
 var getMaxPop = function(people)
 {
     return d3.max(people.map(function(person){return person.population}))

@@ -15,9 +15,7 @@
 #tooltip.hidden{
     display:none;
 }
-#buttons{
-    width:300;
-}
+
 button{
     float: left;
     clear: both;
