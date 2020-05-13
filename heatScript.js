@@ -1,4 +1,4 @@
-var votePromise = d3.csv("demoData.csv");
+var votePromise = d3.csv("finalLabData.csv");
 
 votePromise.then(function(people)
 {
@@ -15,14 +15,19 @@ var initGraph = function(people, target)
 {
     people = people.sort((a,b)=> (a.age > b.age)? 1: -1);
     
+    var screen = {width:560, height:400};
     
-    var screen = {width:500, height:400};
-    
-    var margins = {top:15, bottom:40, left:70, right:15};
+    var margins = {top:15, bottom:40, left:70, right:75};
     var graph =
     {
         width:screen.width-margins.left-margins.right,
         height:screen.height-margins.top-margins.bottom,
+    }
+    
+     var lengths = {
+        screen:screen,
+        margins:margins,
+        graph:graph
     }
     
     //set the screen size
@@ -43,16 +48,34 @@ var initGraph = function(people, target)
     var yScale = d3.scaleBand()
                 .domain([1,2,3,4,5])
                 .range([graph.height,0])
+    var legendScale = d3.scaleLinear()
+                .domain([0,getMaxPop(people)])
+                .range([0,screen.height/3])
     
     var colorScale = d3.scaleLinear()
         .range(["white", "blue"])
-        .domain([0,2])
+        .domain([0,getMaxPop(people)])
     
-    
+    var labelTitle = "Population by Color"
+    console.log(d3.max(people.map(function(person){return person.age})))
     createLabels(screen,margins,graph,target);
+    createLegend(screen, margins, graph, target,"white", "blue", legendScale, labelTitle)
     createAxes(screen,margins,graph,target,xScale,yScale);
-    DrawHeatMap(people, graph, target, xScale, yScale, colorScale);
+    DrawHeatMap(people, graph, target, xScale, yScale, colorScale, function(person){return person.population},function(person){return person.population},"white","blue");
+    initButtons(people, target, xScale, yScale, lengths);
     
+}
+var clearMap = function(target)
+{
+    d3.select(target)
+        .select(".graph")
+        .selectAll("rect")
+        .remove();
+}
+var clearLegend = function(target)
+{
+    d3.select(target)
+        .remove()
 }
 var createLabels = function(screen, margins, graph, target)
 {
@@ -85,6 +108,60 @@ var createLabels = function(screen, margins, graph, target)
  
     
 }
+var createLegend = function(screen, margins, graph, target,startColor, endColor,legendScale,labelTitle)
+{
+    var moneyScale = 
+        d3.scaleSequential()
+        .domain([0,1000000])
+        .interpolator(d3.interpolateBlues);
+    var legend = d3.select(target)
+        .append("g")
+        .classed("legend", true)
+    var svg = legend.append("svg")
+    
+    var def = svg.append("defs")
+    var linearGradient = def.append("linearGradient")
+            .attr("id", "linearGradient")
+            .attr("x1", "0%")
+            .attr("y1", "0%")
+            .attr("x2", "0%")
+            .attr("y2", "100%")
+            .attr("spreadMethod", "pad")
+    //Set the color for the start (0%)
+    linearGradient.append("stop")
+        .attr("offset", "0%")
+        .attr("stop-color", startColor);
+
+    //Set the color for the end (100%)
+    linearGradient.append("stop")
+        .attr("offset", "100%")
+        .attr("stop-color", endColor); //dark blue
+    
+   svg.append("rect")
+            .attr("width", "10")
+            .attr("height", screen.height/3)
+            .attr("x", screen.width - margins.right + 35)
+            .attr("y", margins.top + 15)
+            .attr("fill", "url(#linearGradient)")
+            .attr("stroke", "black")
+    // text element
+   svg.append("g")
+            .attr("transform","translate("+(screen.width + 10)+","+(- screen.height - margins.bottom +5)+")")
+            .append("text")
+            .text(labelTitle)
+                .style("font-size","14")
+                .attr("x",screen.width - margins.right +45)
+                .attr("y", margins.top +15)
+                .attr("text-anchor","middle")
+                .attr("transform","rotate(90)")
+    var legendAxis = d3.axisLeft(legendScale)
+            .ticks(5);
+    svg.append("g")
+            .classed("axis", "true")
+            .attr("transform","translate("+(screen.width - margins.right +35) +","+(margins.top +15)+")")
+            .call(legendAxis)
+            
+}
 var createAxes = function(screen,margins,graph,
                            target,xScale,yScale)
 {
@@ -101,8 +178,91 @@ var createAxes = function(screen,margins,graph,
         .attr("transform","translate("+margins.left+","
              +(margins.top)+")")
         .call(yAxis)
-}   
-var DrawHeatMap = function(people, graph, target, xScale, yScale, colorScale)
+}
+var initButtons = function(people,target, xScale, yScale, lengths)
+{
+    
+    d3.select("#default")
+    .on("click",function()
+    {
+        //clear old stuff
+        clearMap(target);
+        clearLegend(".legend");
+        
+        // redefineScales
+        var colorScale = d3.scaleLinear()
+            .range(["white", "blue"])
+            .domain([0,getMaxPop(people)])
+        var legendScale = d3.scaleLinear()
+                .domain([0,getMaxPop(people)])
+                .range([0,lengths.screen.height/3])
+        
+        //draw map and legend
+        DrawHeatMap(people, lengths.graph, target, xScale, yScale, colorScale,function(person){return person.population},function(person){return person.population},"white","blue");
+        createLegend(lengths.screen, lengths.margins, lengths.graph, target, "white", "blue",legendScale,"Population by Color")
+    })
+    
+    
+    d3.select("#mvf")
+    .on("click",function()
+    {
+        clearMap(target);
+        clearLegend(".legend");
+        
+        var colorScale = d3.scaleLinear()
+            .range(["white", "pink"])
+            .domain([0,getFemalePercentage(people)])
+        
+        var legendScale = d3.scaleLinear()
+                .domain([0,getFemalePercentage(people)])
+                .range([0,lengths.screen.height/3])
+        
+        
+        DrawHeatMap(people, lengths.graph, target, xScale, yScale, colorScale,function(person){return (person.population - person.malePop)/person.population*100},function(person){return person.population - person.malePop},"white","pink");
+        
+        createLegend(lengths.screen, lengths.margins, lengths.graph, target, "white", "pink",legendScale,"Female Percentage")
+    })
+     d3.select("#wvm")
+    .on("click",function()
+    {
+        clearMap(target);
+        clearLegend(".legend");
+        
+        var colorScale = d3.scaleLinear()
+            .range(["white", "orange"])
+            .domain([0,getMinorityPercentage(people)])
+        
+        var legendScale = d3.scaleLinear()
+                .domain([0,getMinorityPercentage(people)])
+                .range([0,lengths.screen.height/3])
+        
+        
+        DrawHeatMap(people, lengths.graph, target, xScale, yScale, colorScale,function(person){return (person.minorityPop)/person.population*100},function(person){return person.minorityPop},"white","orange");
+        createLegend(lengths.screen, lengths.margins, lengths.graph, target, "white", "orange",legendScale,"Minority Percentage")
+    })
+     d3.select("#ivp")
+    .on("click",function()
+    {
+        clearMap(target);
+        clearLegend(".legend");
+        
+        var colorScale = d3.scaleLinear()
+            .range(["white", "red"])
+            .domain([0,getIndependentPercentage(people)])
+            console.log(getIndependentPercentage(people))
+        
+        var legendScale = d3.scaleLinear()
+                .domain([0,getIndependentPercentage(people)])
+                .range([0,lengths.screen.height/3])
+        
+        
+        DrawHeatMap(people, lengths.graph, target, xScale, yScale, colorScale,function(person){return (person.IndependentPop)/person.population*100},function(person){return person.IndependentPop},"white","red");
+        createLegend(lengths.screen, lengths.margins, lengths.graph, target, "white", "red",legendScale,"Independent Percentage")
+    })
+    
+}
+    
+var DrawHeatMap = function(people, graph, target, xScale, yScale, colorScale,colorFunction,pieFunction, pieColor1, pieColor2,pieText1)
 {
     var heatMap = d3.select(target)
     .select(".graph")
@@ -114,8 +274,83 @@ var DrawHeatMap = function(people, graph, target, xScale, yScale, colorScale)
         .attr("y", function(person){return yScale(person.interest)})
         .attr("width", xScale.bandwidth())
         .attr("height", yScale.bandwidth())
-        .style("fill",function(person){return colorScale(person.population)})
+        .style("fill",function(person){return colorScale(colorFunction(person))})
+        .on("mouseover", function(person)
+        {
+            var person = person
+            var xPosition = d3.event.PageX;
+            var yPosition = d3.event.PageY;
+            d3.select("#tooltip")
+                .style("left", xPosition + "px")
+                .style("top", yPosition + "px")
+            d3.select("#pieChart")
+            drawPieChart(person, "#pieChart", pieFunction, pieColor1, pieColor2)
+            d3.select("#tooltip").classed("hidden",false)
+                       
+        })
+        .on("mouseout", function(){
+            d3.select("#tooltip svg").remove();
+            d3.select("#tooltip")
+                .classed("hidden", true)
+                .append("svg")
+                    .attr("id","pieChart")
+            
+        })
       
+}
+var drawPieChart = function(person, target, specificFunction, pieColor1, pieColor2)
+{
+    var datapoint1 = Math.round(specificFunction(person))
+    var datapoint2 = person.population- datapoint1
+    var color = d3.scaleOrdinal()
+        .range([pieColor2,pieColor1]);
+    
+    var dataset = [datapoint1,datapoint2]
+    var pie =d3.pie();
+    var w = 300;
+    var h = 300;
+    var outerRadius = w/2;
+    var innerRadius = 0;
+    var arc = d3.arc()
+        .innerRadius(innerRadius)
+        .outerRadius(outerRadius);
+    var svg = d3.select(target)
+        .attr("width", w)
+        .attr("height", h);
+    
+    var arcs = svg.selectAll("g.arc")
+        .data(pie(dataset))
+        .enter()
+        .append("g")
+        .attr("class", "arc")
+        .attr("transform", "translate("+outerRadius + "," + outerRadius +")");
+    arcs.append("path")
+        .attr("fill", function(d,i){return color(i)})
+        .attr("stroke","black")
+        .attr("d", arc)
+    arcs.append("text")
+        .attr("transform", function(d){
+            return "translate("+arc.centroid(d) +")";
+        })
+        .attr("text-anchor", "middle")
+        .text(function(d){return d.value});
+}
+// helper functions that dont draw anything, but make code more readable for people.
+var getMaxPop = function(people)
+{
+    return d3.max(people.map(function(person){return person.population}))
+}
+var getFemalePercentage = function(people)
+{
+    return d3.max(people.map(function(person){return (person.population - person.malePop)/person.population *100}))
+}
+var getMinorityPercentage = function(people)
+{
+    return d3.max(people.map(function(person){return person.minorityPop/person.population *100}))
+}
+var getIndependentPercentage = function(people)
+{
+    return d3.max(people.map(function(person){return person.IndependentPop/person.population *100}))
 }
 // creates a new list of objects in order to give stats about population instead of individuals
 var manipulateCsv = function(people)
@@ -129,12 +364,12 @@ var manipulateCsv = function(people)
         var inList = false;
         for (j = 0; j <NewObjectList.length;j++)
         {
-               if(people[i].age == NewObjectList[j].age  && NewObjectList[j].interest == people[i].interest)
+               if(Math.floor(people[i].age/10)*10 == NewObjectList[j].age  && NewObjectList[j].interest == people[i].interest)
                 {
                     NewObjectList[j].population +=1
                     if(people[i].pid == "Independent"){NewObjectList[j].IndependentPop +=1}
                     if(people[i].sex == "Male"){NewObjectList[j].malePop +=1}
-                    if(people[i].race == "Non-White"){NewObjectList[j].minorityPop +=1}
+                    if(people[i].race == "Non-Whte"){NewObjectList[j].minorityPop +=1}
                     inList = true;
                     console.log("updated")
                 }
@@ -142,14 +377,13 @@ var manipulateCsv = function(people)
         }
         if(inList == false)
         {
-            NewObjectList.push({age: people[i].age, interest: people[i].interest, population:1, IndependentPop: 0, minorityPop: 0, malePop: 0})
+            NewObjectList.push({age: Math.floor(people[i].age/10)*10, interest: people[i].interest, population:1, IndependentPop: 0, minorityPop: 0, malePop: 0})
             if(people[i].pid == "Independent"){NewObjectList[NewObjectList.length-1].IndependentPop +=1}
             if(people[i].sex == "Male"){NewObjectList[NewObjectList.length-1].malePop +=1}
-            if(people[i].race == "Non-White"){NewObjectList[NewObjectList.length-1].minorityPop +=1}
+            if(people[i].race == "Non-Whte"){NewObjectList[NewObjectList.length-1].minorityPop +=1}
             inList = true
         }
     }
-    
     console.log(NewObjectList)
     return NewObjectList
 }

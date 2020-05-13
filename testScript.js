@@ -1,0 +1,25 @@
+var drawBoxes = function(distData, target, xScale, yScale)
+{
+    //Create lines
+     var line = d3.select(target)
+        .selectAll("rect")
+        .data(distData)
+        .enter()
+        .append("rect")
+            .attr("x",function(d){return xScale(d.index) })
+            .attr("y",function (d){return yScale(d.median) })
+            .attr("width", xScale.bandwidth()/4)
+            .attr("height", function(d){return yScale(d.max - d.min)})
+            .style("fill", "red")
+     //Create boxes, order is done so that boxes are made on top of the lines.
+     var boxes = d3.select(target)
+        .selectAll("rect")
+        .data(distData)
+        .enter()
+        .append("rect")
+            .attr("x",function(d){return xScale(d.index) })
+            .attr("y",function (d){return yScale(d.median) })
+            .attr("width", xScale.bandwidth())
+            .attr("height", function(d){return yScale(d.topQ - d.bottomQ)})
+            .style("fill", "black")
+}
