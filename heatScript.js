@@ -411,7 +411,7 @@ var drawPieChart = function(person, target, specificFunction, pieColor1, pieColo
     arcs.append("text")
         .attr("transform", function(d){return "translate("+arc.centroid(d) +")";})
         .attr("text-anchor", "middle")
-        .text(function(d){if(d.value > 0){if(d.value == 1){return d.value + " Person"} else{return d.value + " People"}}})
+        .text(function(d){if(d.value > 0){if(d.value == 1){return d.value + " pers."} else{return d.value + " ppl."}}})
 }
 // helper functions that dont draw anything, but make code more readable for people.
 
