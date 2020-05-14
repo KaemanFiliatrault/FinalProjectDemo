@@ -1,6 +1,6 @@
 #tooltip {
     position: absolute;
-    width: 150px;
+    width: =auto;
     height: auto;
     padding: 10px;
     background-color: white;
@@ -15,8 +15,29 @@
 #tooltip.hidden{
     display:none;
 }
-
-button{
+.button{
+    padding-top: 50px;
     float: left;
-    clear: both;
+    background-color:white;
+    padding: 20px;
+    padding-bottom: 20px;
+    border-radius: 12px;
+    border-width: 2px;
+    font-weight: 300px;
+    -webkit-text-stroke-width: .5px; 
+    -webkit-text-stroke-color: black;
 }
+.button:hover{
+    background-color:grey;
+    border-color:white;
+    -webkit-text-stroke-color: white;
+}
+#HeatMap{
+    padding-bottom:50px;
+}
+.labels text{
+    fill: cyan;
+    stroke: black;
+    font-size: 24;
+}
+

@@ -17,7 +17,7 @@ var initGraph = function(people, target)
     
     var screen = {width:560, height:400};
     
-    var margins = {top:15, bottom:40, left:70, right:75};
+    var margins = {top:30, bottom:40, left:70, right:75};
     var graph =
     {
         width:screen.width-margins.left-margins.right,
@@ -90,7 +90,7 @@ var createLabels = function(screen, margins, graph, target)
         .classed("labels",true)
     
     labels.append("text")
-        .text("Political Interest Across Age Groups")
+        .text("Apathy Across Age Groups")
         .classed("title",true)
         .attr("text-anchor","middle")
         .attr("x",margins.left+(graph.width/2))
@@ -111,6 +111,9 @@ var createLabels = function(screen, margins, graph, target)
         .classed("label",true)
         .attr("text-anchor","middle")
         .attr("transform","rotate(90)")
+    
+    /*-webkit-text-stroke-width: .5px; 
+    -webkit-text-stroke-color: black;*/
  
     
 }
@@ -170,7 +173,7 @@ var createLegendLabel = function(target,labelTitle, margins, screen)
 {
     console.log(screen.width)
     d3.select(target).append("g")
-            .attr("transform","translate("+(screen.width + 10)+","+(- screen.height - margins.bottom +5)+")")
+            .attr("transform","translate("+(screen.width + 25)+","+(- screen.height - margins.bottom +15)+")")
             .append("text")
             .attr("id", "legendText")
             .text(labelTitle)
@@ -183,6 +186,7 @@ var createLegendLabel = function(target,labelTitle, margins, screen)
 var updateLegendLabel = function(target,labelTitle)
 {
     d3.select(target)
+        .transition()
         .text(labelTitle)
 }
 var createLegendAxes = function(legendScale, margins, screen, target)
@@ -225,6 +229,16 @@ var createAxes = function(screen,margins,graph,
         .attr("transform","translate("+margins.left+","
              +(margins.top)+")")
         .call(yAxis)
+}
+updateButtons= function(color)
+{
+    d3.selectAll(".button")
+            .transition()
+            .style("color", color)
+            .style("border-color",color)
+    d3.selectAll(".labels text")
+            .transition()
+            .style("fill", color)
 }
 var initButtons = function(people,target, xScale, yScale, lengths)
 {
@@ -308,6 +322,7 @@ var initButtons = function(people,target, xScale, yScale, lengths)
     
 var DrawHeatMap = function(people, graph, target, xScale, yScale, colorScale,colorFunction,pieFunction, pieColor1, pieColor2,pieText1)
 {
+    updateButtons(pieColor2)
     //Join
     var heatMap = d3.select(target)
     .select(".graph")
@@ -327,24 +342,32 @@ var DrawHeatMap = function(people, graph, target, xScale, yScale, colorScale,col
         .attr("y", function(person){return yScale(person.interest)})
         .style("fill","white")
     heatMap.transition()
-        .duration(1500)
+        .duration(1000)
         .attr("width", xScale.bandwidth())
         .attr("height", yScale.bandwidth())
         .style("fill",function(person){return colorScale(colorFunction(person))})
     heatMap.on("mouseover", function(person)
         {
+            d3.select(this)
+                .transition(500)
+                .style("stroke","black")
             var person = person
             var xPosition = d3.event.PageX;
+            console.log(xPosition);
             var yPosition = d3.event.PageY;
             d3.select("#tooltip")
-                .style("left", xPosition + "px")
-                .style("top", yPosition + "px")
+                .transition()
+                .style("left", d3.event.clientX + "px")
+                .style("top", d3.event.clientY + "px")
             d3.select("#pieChart")
             drawPieChart(person, "#pieChart", pieFunction, pieColor1, pieColor2)
             d3.select("#tooltip").classed("hidden",false)
                        
         })
         .on("mouseout", function(){
+            d3.select(this)
+                .transition(500)
+                .style("stroke","none")
             d3.select("#tooltip svg").remove();
             d3.select("#tooltip")
                 .classed("hidden", true)
@@ -364,8 +387,8 @@ var drawPieChart = function(person, target, specificFunction, pieColor1, pieColo
     
     var dataset = [datapoint1,datapoint2]
     var pie =d3.pie();
-    var w = 300;
-    var h = 300;
+    var w = 200;
+    var h = 200;
     var outerRadius = w/2;
     var innerRadius = 0;
     var arc = d3.arc()
@@ -386,12 +409,9 @@ var drawPieChart = function(person, target, specificFunction, pieColor1, pieColo
         .attr("stroke","black")
         .attr("d", arc)
     arcs.append("text")
-        .attr("transform", function(d){
-            return "translate("+arc.centroid(d) +")";
-        })
+        .attr("transform", function(d){return "translate("+arc.centroid(d) +")";})
         .attr("text-anchor", "middle")
-        .text(function(d){if(d.value > 0){if(d.value == 1){return d.value + " Person"} else{return d.value + " People"}}});
- 
+        .text(function(d){if(d.value > 0){if(d.value == 1){return d.value + " Person"} else{return d.value + " People"}}})
 }
 // helper functions that dont draw anything, but make code more readable for people.
 
